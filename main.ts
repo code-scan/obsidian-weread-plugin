@@ -75,11 +75,56 @@ export default class WereadPlugin extends Plugin {
 	}
 
 	async startMiddleServer(app: any): Promise<Server> {
-		const cookie = this.settings.cookie;
-		if (cookie === undefined || cookie == '') {
-			new Notice('cookie未设置，请填写Cookie');
-		}
-		const escapeCookie = this.escapeCookie(cookie);
+		const that=this;
+		app.use(
+			'/cookie',
+			createProxyMiddleware({
+				target: 'https://weread.qq.com',
+				changeOrigin: true,
+				pathRewrite: {
+					'^/cookie': '/'
+				},
+				onProxyReq: function (proxyReq, req, res) {
+					try {
+						proxyReq.setHeader('Cookie', that.settings.cookie);
+					} catch (error) {
+						new Notice('cookie 设置失败，检查Cookie格式');
+					}
+				},
+				onProxyRes: function (proxyRes, req, res: ServerResponse) {
+					console.log(that.settings);
+					console.log(res);
+					proxyRes.headers['Access-Control-Allow-Origin'] = '*';
+					const respCookie = proxyRes.headers['set-cookie'];
+					if(!respCookie){
+						return;
+					}
+					let new_cookie: { [key: string]: string } = {};
+					new_cookie = { a: 'b' };
+					const current_cookie = that.settings.cookie.split('; ');
+					for (let index = 0; index < current_cookie.length; index++) {
+						const element = current_cookie[index];
+						const value = element.split('=');
+						if (value && value.length == 2) {
+							new_cookie[value[0]] = value[1];
+						}
+					}
+					for (let index = 0; index < respCookie.length; index++) {
+						const element = respCookie[index];
+						const value=element.split('; ');
+						if(value && value.length>1){
+							const ck = value[0].split('=');
+							new_cookie[ck[0]] = ck[1];
+						}
+					}
+					that.settings.cookie=''
+					for(const key in new_cookie){
+						that.settings.cookie=that.settings.cookie+`${key}=${new_cookie[key]}; `
+					}
+					console.log(that.settings.cookie);
+				}
+			})
+		);
 		app.use(
 			'/',
 			createProxyMiddleware({
@@ -87,7 +132,7 @@ export default class WereadPlugin extends Plugin {
 				changeOrigin: true,
 				onProxyReq: function (proxyReq, req, res) {
 					try {
-						proxyReq.setHeader('Cookie', escapeCookie);
+						proxyReq.setHeader('Cookie', that.settings.cookie);
 					} catch (error) {
 						new Notice('cookie 设置失败，检查Cookie格式');
 					}

@@ -18,6 +18,7 @@ export default class ApiManager {
 
 	async getNotebooks() {
 		try {
+			await axios.get(this.baseUrl + '/cookie', {});
 			let noteBooks = [];
 			const resp = await axios.get(this.baseUrl + '/user/notebooks', {});
 			noteBooks = resp.data.books;
