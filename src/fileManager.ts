@@ -83,12 +83,15 @@ export default class FileManager {
 			console.info(`Folder ${folderPath} not found. Will be created`);
 			await this.createFolder(folderPath);
 		}
-
 		let fileName = `${sanitizeTitle(notebook.metaData.title)}`;
 		if (notebook.metaData.isDuplicated) {
 			fileName += '-' + notebook.metaData.bookId;
 		}
-		const filePath = `${folderPath}/${fileName}.md`;
+		if (!(await this.vault.adapter.exists(`${folderPath}/${fileName}`))) {
+			console.info(`Folder ${folderPath}/${fileName} not found. Will be created`);
+			await this.createFolder(`${folderPath}/${fileName}`);
+		}
+		const filePath = `${folderPath}/${fileName}/${fileName} - 阅读笔记.md`;
 		return filePath;
 	}
 }
